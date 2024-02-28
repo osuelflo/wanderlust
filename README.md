@@ -20,18 +20,18 @@ Begin by checking extensions using `CREATE EXTENSION postgis;` and `CREATE EXTEN
 ```
 WITH start AS (
   SELECT topo.source --could also be topo.target
-  FROM lisbon_2po_4pgr as topo
+  FROM minnesota_2po_4pgr as topo
   ORDER BY topo.geom_way <-> ST_SetSRID(
-    ST_GeomFromText('POINT (-9.144035 38.737524)'),
+    ST_GeomFromText('POINT (-93.167165 44.936098)'),
   4326)
   LIMIT 1
 ),
 -- find the nearest vertex to the destination longitude/latitude
 destination AS (
   SELECT topo.target --could also be topo.target
-  FROM lisbon_2po_4pgr as topo
+  FROM minnesota_2po_4pgr as topo
   ORDER BY topo.geom_way <-> ST_SetSRID(
-    ST_GeomFromText('POINT (-9.1545999491376 38.73023147131511)'),
+    ST_GeomFromText('POINT (-90.337104 47.751911)'),
   4326)
   LIMIT 1
 )
@@ -42,10 +42,43 @@ FROM pgr_dijkstra('
          source,
          target,
          ST_Length(ST_Transform(geom_way, 3857)) AS cost
-        FROM lisbon_2po_4pgr',
+        FROM minnesota_2po_4pgr',
     array(SELECT source FROM start),
     array(SELECT target FROM destination),
     directed := false) AS di
-JOIN   lisbon_2po_4pgr AS pt
+JOIN   minnesota_2po_4pgr AS pt
+  ON   di.edge = pt.id;
+```
+This returns coordinates sorta
+```
+WITH start AS (
+  SELECT topo.source --could also be topo.target
+  FROM minnesota_2po_4pgr as topo
+  ORDER BY topo.geom_way <-> ST_SetSRID(
+    ST_GeomFromText('POINT (-93.167165 44.936098)'),
+  4326)
+  LIMIT 1
+),
+-- find the nearest vertex to the destination longitude/latitude
+destination AS (
+  SELECT topo.target --could also be topo.target
+  FROM minnesota_2po_4pgr as topo
+  ORDER BY topo.geom_way <-> ST_SetSRID(
+    ST_GeomFromText('POINT (-90.337104 47.751911)'),
+  4326)
+  LIMIT 1
+)
+-- use Dijsktra and join with the geometries
+SELECT ST_AsText(ST_Transform(ST_Union(geom_way), 4326)) as route
+FROM pgr_dijkstra('
+    SELECT id,
+         source,
+         target,
+         ST_Length(ST_Transform(geom_way, 3857)) AS cost
+        FROM minnesota_2po_4pgr',
+    array(SELECT source FROM start),
+    array(SELECT target FROM destination),
+    directed := false) AS di
+JOIN   minnesota_2po_4pgr AS pt
   ON   di.edge = pt.id;
 ```
