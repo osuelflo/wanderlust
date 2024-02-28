@@ -6,8 +6,6 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	
 	<title>GeoJSON tutorial - Leaflet</title>
-	
-	<link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico" />
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
@@ -34,8 +32,9 @@
 <body>
 
 <h1>Leaflet Route Test</h2>
-<div id="map" style="width: 1200x; height: 800px;"></div>
 
+
+<div id="map" style="width: 1200x; height: 800px;"></div>
 
 
 <script>
@@ -66,10 +65,21 @@
     ]
 	const route = L.polyline(lats , {color: 'red', opacity: .5}).addTo(map);
 
+	var start = lats[0]
+	var destination = lats[lats.length-1]
+
+	let startMarker = L.marker(start).addTo(map);
+	let destinationMarker = L.marker(destination).addTo(map);
+
+	startMarker.bindPopup("<b>Start Location</b><br>" + start).openPopup();
+	destinationMarker.bindPopup("<b>Destination</b><br>" + destination).openPopup();
+
+
+
     for(coord of lats){
         const marker = L.circle(coord, {radius: 10, fillOpacity: 1, color: 'grey'}).addTo(map);
     }
-
+	
 </script>
 
 
