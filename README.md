@@ -5,6 +5,10 @@
 Install PostgreSQL from [This Link](https://www.enterprisedb.com/downloads/postgres-postgresql-downloads).
 Follow the prompts, pay attention to the server details (Listening port, etc.), then once finished check the box to launch stack builder.  
 Follow prompts once more until the option to add spatial extensions appears, under which we checked the box for PostGIS. Once this is complete, pgAdmin can be opened and used to create a database, and `CREATE EXTENSION postgis;` can be used to add the extension.
+
+- config file changes
+- specific version
+  
 This was all done according to [this tutorial](https://mapscaping.com/getting-started-with-postgis/).
 
 ### Step 2:  Converting OSM Data to Data for PGRouting
