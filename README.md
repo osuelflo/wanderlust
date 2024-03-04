@@ -73,7 +73,7 @@ destination AS (
   LIMIT 1
 )
 -- use Dijsktra and join with the geometries
-SELECT ST_AsText(ST_Transform(ST_Union(geom_way), 4326)) as route
+SELECT ST_AsText(ST_LineMerge(ST_AsText(ST_Transform(ST_Union(geom_way), 4326)))) as route
 FROM pgr_dijkstra('
     SELECT id,
          source,
