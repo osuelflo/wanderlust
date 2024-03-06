@@ -55,8 +55,9 @@
 	*/
 	function addPolylineFromInput() {
 		// Get the input value and split it into individual coordinate pairs
-		const inputText = document.getElementById('coordinatesInput').value;
-		const coordinatePairs = inputText.split(',');
+		const inputText = new String(document.getElementById('coordinatesInput').value);
+		const newText = inputText.substring(11,inputText.length - 1)
+		const coordinatePairs = newText.split(',');
 
 		// Extract latitude and longitude for each pair and create LatLng objects
 		// the .map method creates an array by running a function on every element from some collection. (in this case coordPairs)
@@ -70,8 +71,6 @@
 
 		// Fit the map bounds to the newly added polyline
 		map.fitBounds(polyline.getBounds());
-		
-		console.log("This is a debug message.")
 	}
 
 	// Add an event listener to the "Add Polyline" button
