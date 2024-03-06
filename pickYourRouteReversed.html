@@ -56,12 +56,12 @@
 	function addPolylineFromInput() {
 		// Get the input value and split it into individual coordinate pairs
 		const inputText = document.getElementById('coordinatesInput').value;
-		const coordinatePairs = inputText.split(';');
+		const coordinatePairs = inputText.split(',');
 
 		// Extract latitude and longitude for each pair and create LatLng objects
 		// the .map method creates an array by running a function on every element from some collection. (in this case coordPairs)
 		const coordinates = coordinatePairs.map(pair => {
-			const [lat, lng] = pair.trim().split(',').map(parseFloat);
+			const [lat, lng] = pair.trim().split(' ').map(parseFloat);
 			return L.latLng(lng, lat);
 		});
 
