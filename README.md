@@ -86,3 +86,15 @@ FROM pgr_dijkstra('
 JOIN   minnesota_2po_4pgr AS pt
   ON   di.edge = pt.id;
 ```
+
+### Step 4. Using Postgres through Javascript
+- First, run the PythonHTTPServer file
+  - If this is the first time using this file, you may have to install the psycopg2 library. Just run pip install psycopg2 in the correct directory and you should be good
+  - This will begin running a server in the background of your computer running out of your localhost
+  - Make sure that you update the database name, password, and port number to match your specific postgres setup
+    - You may also have to update the prefix on your minnesota files in the SQL query, because mine start with mn, but James' start with minnesota
+
+- Then, open the postgresJavascriptTest.html file
+  - Pressing the Get Postgres Route button will paste the result of the HTTP request to our python server into the polyline input text box
+
+- Then you should just be able to add the polyline from our polyline button
