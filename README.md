@@ -92,9 +92,20 @@ JOIN   minnesota_2po_4pgr AS pt
   - If this is the first time using this file, you may have to install the psycopg2 library. Just run pip install psycopg2 in the correct directory and you should be good
   - This will begin running a server in the background of your computer running out of your localhost
   - Make sure that you update the database name, password, and port number to match your specific postgres setup
-    - You may also have to update the prefix on your minnesota files in the SQL query, because mine start with mn, but James' start with minnesota
+    - You may also have to update the prefix on your minnesota files in the SQL query - I changed my name to minnesota, so hopefully not
+  - If you make any changes to this Python file, or want to close the server at any point, you can just close the Python terminal in VSCode
+    - If you change the Python file but don't close the terminal, your changes won't be used by the server
+
 
 - Then, open the postgresJavascriptTest.html file
-  - Pressing the Get Postgres Route button will paste the result of the HTTP request to our python server into the polyline input text box
+  - There should be a text input slot for your start and end coordinates
+    - put coordinates into those slots, removing the comma that clicking the map will include
+  - Pressing the Get Postgres Route button will pass those two slots into pgrouting and respond with the result of the HTTP request to our python server into the polyline input text box
+    - ### BUG HERE!
+      - Right now, basically any route that isn't the one we calibrated on (the St. Paul to Duluth route) will give us some weird ass route that just runs along the Wisconsin border
+      - I'm not sure why. I think James knows more about the Query process than I do. Looks like it generates a route that doesn't actually connect the two corods we give it
+        - I think it has to do with the SRID 4326 in the start/destination section. Maybe it's selecting a weird topography target
+      - If you want to just make the route appear, you can steal the original coords for the calibration route from the pythonPostgresTest.py file - when the coords are the same as our originals it works
+        - Those coords are -93.167165 44.936098 for the start and -90.337104 47.751911 for the destination
 
 - Then you should just be able to add the polyline from our polyline button

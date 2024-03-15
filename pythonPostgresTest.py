@@ -18,18 +18,18 @@ try:
     # Executing a SQL query
     cursor.execute(""" WITH start AS (
   SELECT topo.source --could also be topo.target
-  FROM mn_2po_4pgr as topo
+  FROM minnesota_2po_4pgr as topo
   ORDER BY topo.geom_way <-> ST_SetSRID(
-    ST_GeomFromText('POINT {0}'),
+    ST_GeomFromText('POINT (-93.167165 44.936098)'),
   4326)
   LIMIT 1
 ),
 -- find the nearest vertex to the destination longitude/latitude
 destination AS (
   SELECT topo.target --could also be topo.target
-  FROM mn_2po_4pgr as topo
+  FROM minnesota_2po_4pgr as topo
   ORDER BY topo.geom_way <-> ST_SetSRID(
-    ST_GeomFromText('POINT {}'),
+    ST_GeomFromText('POINT (-90.337104 47.751911)'),
   4326)
   LIMIT 1
 )
@@ -40,12 +40,12 @@ FROM pgr_dijkstra('
          source,
          target,
          ST_Length(ST_Transform(geom_way, 3857)) AS cost
-        FROM mn_2po_4pgr',
+        FROM minnesota_2po_4pgr',
     array(SELECT source FROM start),
     array(SELECT target FROM destination),
     directed := false) AS di
-JOIN   mn_2po_4pgr AS pt
-  ON   di.edge = pt.id;""".format(start, destination))
+JOIN   minnesota_2po_4pgr AS pt
+  ON   di.edge = pt.id;""")
     # Fetch result
     record = cursor.fetchone()
     print("You are connected to - ", record, "\n")
