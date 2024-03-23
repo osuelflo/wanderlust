@@ -41,6 +41,13 @@
 
 <button id="addPolylineBtn">Add Polyline</button>
 
+<!-- Toggle Pedestrian Preference -->
+<label for="route-type">Choose a route type:</label> 
+    <select name="Route Types" id="route-type"> 
+        <option value="ST_Length(ST_Transform(geom_way, 3857))">Distance</option> 
+        <option value="ped_bike_pref">Pedestrian</option>  
+    </select>
+
 <!-- This is the button to actually make our Postgres query-->
 <button id="getJSButton">Get Postgres Route</button>
 
@@ -90,7 +97,9 @@
 			// we use this to add a parameter slot for start and destination, and we'll get those coords from the two text input slots
 		const url = (
 			'http://localhost:9999?' +
-			new URLSearchParams({start: document.getElementById('startCoordInput').value, destination: document.getElementById('destinationCoordInput').value})
+			new URLSearchParams({start: document.getElementById('startCoordInput').value, 
+								destination: document.getElementById('destinationCoordInput').value,
+								weight: document.getElementById('route-type').value}) //This gets the text value of our dropdown
 			);
 
 		// this fetch request is JS's built-in API for making HTTP requests. It's an "await" function because it needs to be asynchronous

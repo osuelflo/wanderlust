@@ -27,15 +27,17 @@ class MyHTTP(BaseHTTPRequestHandler):
                 # then it checks the specific name of each parameter and grabs the first thing in that slot. I bet the [0] can be deleted
         start = parse_qs(urlData.query)["start"][0]
         destination = parse_qs(urlData.query)["destination"][0]
+        weight = parse_qs(urlData.query)["weight"][0]
 
-        print("start", start, "destination", destination)
+
+        print("start", start, "destination", destination, "weight", weight)
 
         # run the python code we want to run after performing a GET request on this
         try:
             # Connect to an existing database
             connection = psycopg2.connect(user="postgres",
-                                        password="YOUR_POSTGRES_PASSWORD",
-                                        host="127.0.0.1",
+                                        password="password",
+                                        host="localhost",
                                         port="5432",
                                         database="postgres")
 
@@ -71,13 +73,13 @@ class MyHTTP(BaseHTTPRequestHandler):
             SELECT id,
                 source,
                 target,
-                ST_Length(ST_Transform(geom_way, 3857)) AS cost
+                {weight} AS cost
                 FROM minnesota_2po_4pgr',
             array(SELECT source FROM start),
             array(SELECT target FROM destination),
             directed := false) AS di
         JOIN   minnesota_2po_4pgr AS pt
-        ON   di.edge = pt.id;""".format(start = start, destination = destination))
+        ON   di.edge = pt.id;""".format(start = start, destination = destination, weight = weight))
             
             # This saves the result of the executed query somewhere
             record = cursor.fetchone()
