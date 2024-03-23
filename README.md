@@ -109,3 +109,36 @@ JOIN   minnesota_2po_4pgr AS pt
         - Those coords are -93.167165 44.936098 for the start and -90.337104 47.751911 for the destination
 
 - Then you should just be able to add the polyline from our polyline button
+
+### Step 5:  Adding Custom Edge Weights
+
+First, we need to add a column to our table.  For our first edited version, we're going to create a column of edge costs that prioritizes pedestrian and biking tracks.  We'll call this new column `ped_bike_pref`.  The sql query looks like this: `ALTER TABLE minnesota_2po_4pgr ADD COLUMN "ped_bike_pref" float;`. Now we have to run a query to update this new column with some weights.  In this case we will edit the weights simply in that we will just divide the cost of any line or polygon that has a category that matches what we want by 1000.  The query is as follows (Took me just over minute to run):
+```
+-- We have our edges stored in two locations, the line table and polygon table.  We must run our logic on both.
+UPDATE minnesota_2po_4pgr as t  --marks the table we're updating as t
+SET ped_bike_pref = --Marks the column  we're setting
+CASE WHEN --If statement
+	(l.highway IN ('footway', 'pedestrian', 'cycleway', 'track', 'steps')) --The tags that we want (stored in the "highway" column of a line/polygon)
+THEN
+	ST_Length(ST_Transform(geom_way, 3857))/1000 --Length/1000
+ELSE
+	ST_Length(ST_Transform(geom_way, 3857)) --Just length
+END
+FROM planet_osm_line AS l --Specifies the table we're getting line data from
+WHERE t.osm_id = l.osm_id; --Makes sure that our cost collumn corresponds to the correct osm_ids in both tables
+
+-- Same code here but run on the planet_osm_polygon table
+UPDATE minnesota_2po_4pgr as t
+SET ped_bike_pref =
+CASE WHEN
+	(l.highway IN ('footway', 'pedestrian', 'cycleway', 'track', 'steps'))
+THEN
+	ST_Length(ST_Transform(geom_way, 3857))/1000
+ELSE
+	ST_Length(ST_Transform(geom_way, 3857))
+END
+FROM planet_osm_polygon AS l
+WHERE t.osm_id = l.osm_id;
+```
+
+Now we should be set to run our route finder query again, but we can replace `ST_Length(ST_Transform(geom_way, 3857))` with `ped_bike_pref`.
