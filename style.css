@@ -1,0 +1,57 @@
+
+h1 {
+    color: green;
+}
+
+#map {
+    height: 80%;
+    width: 80%;
+    z-index: 1;
+    margin: 0 auto;
+    position: relative;
+}
+
+.overlay {
+  position: absolute;
+  width: 200px;
+  height: 85px;
+  right: 10px;
+  top: 10px;
+  padding-top:5px;
+  background-color: lightblue;
+  
+  border-radius: 15px / 15px;
+  z-index: 99999999;
+}
+
+.addressInput {
+    margin-bottom: 5px;
+}
+
+/*
+Types of selectors:
+    Element - takes HTML elements
+    Class - Element based on class attribute
+        - when creating an html element, you can add class="class-name"
+            - This is only used to distinguish different versions of the same element
+            - use period then the name
+    ID - an element can only have one ID, and should be unique per element
+        - Use #id-name
+
+    Can use ancestors and children
+        - put a space between ancestor and child
+        - so div p would select all p elements that are in divs
+    
+    Also an everything selector - applies to every element on the page
+    * {
+        property: value
+    }
+
+    How to Load CSS
+        - Inline is the worst, use the style tag in html to give CSS
+            - Bad because we intertwine style & html
+        - Style element
+            - HTML element defined in head like CSS
+        - Link to external CSS file
+            - <link rel="stylesheet" href="style.css" />
+*/

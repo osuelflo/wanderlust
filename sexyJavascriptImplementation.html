@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<base target="_top">
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	
+	<title>Postgres Route Plumbing Prototype</title>
+
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+	<link rel="stylesheet" href="style.css" />
+	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+	<style>
+		html, body {
+			height: 100%;
+			margin: 0;
+		}
+		.leaflet-container {
+			height: 800px;
+			width: 1200px;
+			max-width: 100%;
+			max-height: 100%;
+		}
+	h1 {text-align: center;}
+	p {text-align: center;}
+	div {text-align: center;}
+
+	</style>
+
+	
+</head>
+<body>
+
+<h1>Leaflet Route Test</h1>
+
+<div id="map" use-global-leaflet="true">
+	<!-- 
+		I put the route buttons on top of the map. Slowly working towards perfect UI
+		Check the CSS file to see how this works - uses position:relative for parent map and position:absolute for overlay
+	-->
+	<div class="overlay" id="overlayBox"> 
+		<!-- These are the inputs for our start and end coords-->
+		<input type="text" id="startCoordInput" class = addressInput placeholder="Coords for start of route">
+		<input type="text" id="destinationCoordInput" class = addressInput placeholder="Coords for end of route">
+
+
+		<button id="getRouteBtn">Get Route</button>
+
+		<!-- Toggle Pedestrian Preference -->
+		<select name="Route Types" id="route-type"> 
+			<option value="ST_Length(ST_Transform(geom_way, 3857))">Distance</option> 
+			<option value="ped_bike_pref">Pedestrian</option>  
+		</select>
+	</div>
+</div>
+
+
+
+<script>
+	const map = L.map('map').setView([44.95, -93.16], 13);
+
+	const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+		maxZoom: 19,
+		attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+	}).addTo(map);
+
+	// This makes it so interacting with our overlay doesn't interact with the map
+	// Got it from here https://stackoverflow.com/a/52735177
+	var overlay = L.DomUtil.get('overlayBox'); // this must be an ID, not class!
+	L.DomEvent.on(overlay, 'mousewheel', L.DomEvent.stopPropagation);
+	L.DomEvent.on(overlay, 'click', L.DomEvent.stopPropagation);
+	L.DomEvent.on(overlay, 'dblclick', L.DomEvent.stopPropagation);
+	L.DomEvent.on(overlay, 'mousedown', L.DomEvent.stopPropagation);	// these two prevent drags from propagating
+	L.DomEvent.on(overlay, 'touchstart', L.DomEvent.stopPropagation);
+
+
+	let routeCoords = "";
+
+	/*
+	To make HTML element A change the content of antoher element (element B, which in this case is our map), we have to 
+	create a JS function that knows about B and can edit it. Then we tie that function to the callback of element A. We
+	can access specific HTML elements from our document using "document.getElementById". After we create the function, we tie
+	it to the callback by creating an eventListener using "elementA.addEventListener('event', callback)".
+	*/
+	function addPolylineFromInput() {
+		// Get the input value and split it into individual coordinate pairs
+		console.log("route coords are: " + routeCoords)
+		const inputText = routeCoords;
+		const newText = inputText.substring(13,inputText.length - 2)
+		console.log(newText.substring(0, 100))
+		const coordinatePairs = newText.split(',');
+		console.log("coordinate pairs for route are:" + coordinatePairs)
+
+		// Extract latitude and longitude for each pair and create LatLng objects
+		// the .map method creates an array by running a function on every element from some collection. (in this case coordPairs)
+		const coordinates = coordinatePairs.map(pair => {
+			const [lat, lng] = pair.split(' ').map(parseFloat);
+			return L.latLng(lng, lat);
+		});
+
+		console.log("coordinates are" + coordinates)
+		// Create a new polyline and add it to the map
+		const polyline = L.polyline(coordinates, {color: 'blue'}).addTo(map);
+
+		// Fit the map bounds to the newly added polyline
+		map.fitBounds(polyline.getBounds());
+	}
+
+	// This is the function that makes our postgres query - really it just makes a call to the existing python server
+	async function getRouteCoords() {
+		// set the url we're going to send our http GET request to. rn it's localhost:9999 (this is set in the pythonHTTPServer.py file!)
+		// the line under this that says new URLSearchParams allows us to add extra parameters to this GET request
+			// we use this to add a parameter slot for start and destination, and we'll get those coords from the two text input slots
+		const url = (
+			'http://localhost:9999?' +
+			new URLSearchParams({start: document.getElementById('startCoordInput').value, 
+								destination: document.getElementById('destinationCoordInput').value,
+								weight: document.getElementById('route-type').value}) //This gets the text value of our dropdown
+			);
+
+		// this fetch request is JS's built-in API for making HTTP requests. It's an "await" function because it needs to be asynchronous
+			// because our pgrouting request takes so long
+		const response = await fetch(url, {
+			method: "GET",
+			headers: {
+				"Content-Type": "text/html",
+			},
+		})	
+		// not sure what this specific part does. We don't do anything with our data until the .then(data) segmenent, 
+			// I think we do this .then first so that we know we have a response before we start asking it for data
+		.then(response => {
+			if (!response.ok) {
+				throw new Error('Network response was not ok');
+				}
+        	return response.text(); 
+		})
+		// this is the segment that officially sets our pgrouting result
+			// the pgrouting result is data - right now we just store it in our coordinateInput text field
+		.then(data => {
+			console.log(data);
+			routeCoords = data})
+		.catch(error => console.error('There was a problem,', error));
+		console.log(routeCoords);
+	}
+
+	async function getRoute() {
+		await getRouteCoords();
+		addPolylineFromInput();
+	}
+
+	
+	// Sets the callback for our get route button
+	document.getElementById('getRouteBtn').addEventListener('click', getRoute);
+
+	
+	// does the logic for our map clicking popups
+	var popup = L.popup();
+	function onMapClick(e) {
+		popup
+			.setLatLng(e.latlng)
+			.setContent("You clicked the map at " + e.latlng.toString())
+			.openOn(map);
+	}
+
+	map.on('click', onMapClick);
+
+</script>
+
+
+
+</body>
+</html>
