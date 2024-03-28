@@ -36,7 +36,7 @@
 <h1>Leaflet Route Test</h1>
 
 <!-- Input to test non-widget geocoding. Doesn't work right now -->
-<input type="text" id="testingGeocoding">
+<!-- <input type="text" id="testingGeocoding"> -->
 
 
 <div id="map" use-global-leaflet="true">
@@ -85,11 +85,11 @@
 	console.log(Object.getOwnPropertyNames(search))
 	console.log(Object.getOwnPropertyNames(provider))
 
-	// This is the code I have for testing non-widget geocoding. Doesn't work very well
-	async function testGeocode() {
-		console.log(await provider.search(document.getElementById("testingGeocoding").value));
-	}
-	document.getElementById("testingGeocoding").addEventListener("focusout", testGeocode);
+	// // This is the code I have for testing non-widget geocoding. Doesn't work very well
+	// async function testGeocode() {
+	// 	console.log(await provider.search(document.getElementById("testingGeocoding").value));
+	// }
+	// document.getElementById("testingGeocoding").addEventListener("focusout", testGeocode);
 
 
 	// This makes it so interacting with our overlay doesn't interact with the map
@@ -170,11 +170,12 @@
 			console.log(data);
 			routeCoords = data})
 		.catch(error => console.error('There was a problem,', error));
-		console.log(routeCoords);
+		console.log("got these from PG " + routeCoords);
+		return routeCoords;
 	}
 
 	async function getRoute() {
-		await getRouteCoords();
+		routeCoords = await getRouteCoords();
 		addPolylineFromInput();
 	}
 
