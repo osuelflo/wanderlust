@@ -175,15 +175,28 @@
 	}
 
 	async function getRoute() {
+		startSpinner();
 		routeCoords = await getRouteCoords();
 		addPolylineFromInput();
+		endSpinner();
 	}
-
 
 	// Sets the callback for our get route button
 	document.getElementById('getRouteBtn').addEventListener('click', getRoute);
+ 
+	// turns on the spinning mouse
+	function startSpinner() {
+		document.body.style.cursor = "wait";
+		document.getElementById("map").style.cursor = "wait";
+	}
 
-	
+	// turns off the spinning mouse
+	function endSpinner() {
+		document.body.style.cursor = "auto"		// TODO: make this happen if errors occur during the PG process too
+		document.getElementById("map").style.cursor = "auto";
+	}
+
+
 	// does the logic for our map clicking popups
 	var popup = L.popup();
 	function onMapClick(e) {
