@@ -142,3 +142,51 @@ WHERE t.osm_id = l.osm_id;
 ```
 
 Now we should be set to run our route finder query again, but we can replace `ST_Length(ST_Transform(geom_way, 3857))` with `ped_bike_pref`.
+
+An issue with this query is that some things are marked as footpaths in sql that are not actually particularly pleasant, as they are sidewalks to major streets.  The version below finds the nearest path to every other considered pedestrian path, and checks if it's a major road, in which case it doesn't decrease the weight.
+
+```
+-- We have our edges stored in two locations, the line table and polygon table.  We must run our logic on both.
+UPDATE minnesota_2po_4pgr as t  --marks the table we're updating as t
+SET ped_bike_pref = --Marks the column  we're setting
+CASE WHEN --If statement
+	(l.highway IN ('footway', 'pedestrian', 'cycleway', 'track', 'steps')) --The tags that we want (stored in the "highway" column of a line/polygon)
+THEN
+	CASE WHEN
+		((SELECT highway FROM --Gets highway tag specifically
+		  (SELECT highway, line.way <-> l.way::geometry AS dist --Creates a distance column
+		   FROM planet_osm_line AS line --checks against all other lines
+		   ORDER BY DIST LIMIT 1)) IN ('motorway', 'trunk', 'primary', 'secondary')) --Checks if nearest road is major
+	THEN
+		ST_Length(ST_Transform(geom_way, 3857))
+	ELSE
+		ST_Length(ST_Transform(geom_way, 3857))/1000--Length/1000
+	END
+ELSE
+	ST_Length(ST_Transform(geom_way, 3857)) --Just length
+END
+FROM planet_osm_line AS l --Specifies the table we're getting line data from
+WHERE t.osm_id = l.osm_id; --Makes sure that our cost collumn corresponds to the correct osm_ids in both tables
+
+-- Same code here but run on the planet_osm_polygon table
+UPDATE minnesota_2po_4pgr as t
+SET ped_bike_pref =
+CASE WHEN
+	(l.highway IN ('footway', 'pedestrian', 'cycleway', 'track', 'steps'))
+THEN
+	CASE WHEN -- Same as last query.  Potential failing:  polygon only checks other polygons, line only checks other lines
+		((SELECT highway FROM 
+		  (SELECT highway, line.way <-> l.way::geometry AS dist 
+		   FROM planet_osm_polygon AS line ORDER BY DIST LIMIT 1)) 
+		 IN ('motorway', 'trunk', 'primary', 'secondary'))
+	THEN
+		ST_Length(ST_Transform(geom_way, 3857))
+	ELSE
+		ST_Length(ST_Transform(geom_way, 3857))/1000--Length/1000
+	END
+ELSE
+	ST_Length(ST_Transform(geom_way, 3857))
+END
+FROM planet_osm_polygon AS l
+WHERE t.osm_id = l.osm_id;
+```
