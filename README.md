@@ -151,15 +151,15 @@ An issue with this query is that some things are marked as footpaths in sql that
 UPDATE minnesota_2po_4pgr as t  --marks the table we're updating as t
 SET ped_bike_pref = --Marks the column  we're setting
 CASE WHEN --If statement
-	(l.highway IN ('footway', 'pedestrian', 'cycleway', 'track', 'steps')) --The tags that we want (stored in the "highway" column of a line/polygon)
+	(l.highway IN ('footway', 'pedestrian', 'cycleway', 'track', 'steps', 'path')) --The tags that we want (stored in the "highway" column of a line/polygon)
 THEN
 	CASE WHEN
-		((SELECT highway FROM --Gets highway tag specifically
-		  (SELECT highway, line.way <-> l.way::geometry AS dist --Creates a distance column
+		((SELECT COUNT(*) FROM --Gets number of nearby lines that are major
+		  (SELECT highway, line.way <-> ST_AsEWKT(l.way)::geometry AS dist --Creates a distance column
 		   FROM planet_osm_line AS line --checks against all other lines
-		   ORDER BY DIST LIMIT 1)) IN ('motorway', 'trunk', 'primary', 'secondary')) --Checks if nearest road is major
+		   ORDER BY DIST) WHERE dist < 50 AND highway IN ('motorway', 'trunk', 'primary', 'secondary')) > 0) --Checks if nearest road is major
 	THEN
-		ST_Length(ST_Transform(geom_way, 3857))
+		ST_Length(ST_Transform(geom_way, 3857))/10--Length/10
 	ELSE
 		ST_Length(ST_Transform(geom_way, 3857))/1000--Length/1000
 	END
@@ -173,15 +173,15 @@ WHERE t.osm_id = l.osm_id; --Makes sure that our cost collumn corresponds to the
 UPDATE minnesota_2po_4pgr as t
 SET ped_bike_pref =
 CASE WHEN
-	(l.highway IN ('footway', 'pedestrian', 'cycleway', 'track', 'steps'))
+	(l.highway IN ('footway', 'pedestrian', 'cycleway', 'track', 'steps', 'path'))
 THEN
-	CASE WHEN -- Same as last query.  Potential failing:  polygon only checks other polygons, line only checks other lines
-		((SELECT highway FROM 
-		  (SELECT highway, line.way <-> l.way::geometry AS dist 
-		   FROM planet_osm_polygon AS line ORDER BY DIST LIMIT 1)) 
-		 IN ('motorway', 'trunk', 'primary', 'secondary'))
+	CASE WHEN
+		((SELECT COUNT(*) FROM --Same as Above
+		  (SELECT highway, line.way <-> ST_AsEWKT(l.way)::geometry AS dist --Creates a distance column
+		   FROM planet_osm_polygon AS line --checks against all other lines
+		   ORDER BY DIST) WHERE dist < 50 AND highway IN ('motorway', 'trunk', 'primary', 'secondary')) > 0) --Checks if nearest road is major
 	THEN
-		ST_Length(ST_Transform(geom_way, 3857))
+		ST_Length(ST_Transform(geom_way, 3857))/10
 	ELSE
 		ST_Length(ST_Transform(geom_way, 3857))/1000--Length/1000
 	END
