@@ -31,6 +31,13 @@
 	<!-- Moved all the styling to our style.css file-->
 </head>
 
+<!-- 
+	STUFF TO DO:
+		- Address matching
+		- Better error/edge-case handling (ie multiple route clicks)
+		- Remove old lines
+		- Better route-choosing viz
+-->
 <body>
 
 <h1>Leaflet Route Test</h1>
@@ -63,7 +70,13 @@
 
 
 <script>
-	const map = L.map('map').setView([44.95, -93.16], 13);
+	const mapStartPos = [44.95, -93.16]
+	const map = L.map('map').setView(mapStartPos, 13);
+	L.control.scale().addTo(map);	// adds a scale to the map
+
+	var startMarker = L.marker(mapStartPos);
+	var destinationMarker = L.marker(mapStartPos);
+
 	var inFocus = null; //Records which textbox was most recently clicked
 
 	const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -94,25 +107,53 @@
 	}
 
 
-	// This is the JS code for geocoding! I can't figure out how to make it work well yet
-	// Documentation is here if you want to try: https://smeijer.github.io/leaflet-geosearch/
+	// got this wait for done typing code from https://stackoverflow.com/a/5926782
+
+	// TODO: make sure this works when we have both boxes
+	// TODO: this doesn't like vague addresses - give an error message to user that says need more info
+	let typingTimer;                //timer identifier
+	let doneTypingInterval = 1500;  //time in ms (5 seconds)
 	const provider = new GeoSearch.OpenStreetMapProvider();
 
-	const search = new GeoSearch.GeoSearchControl({
-		provider,
-		style: "button"
-	});
-	map.addControl(search);
-	
-	// Trying to see what's in this widget
-	console.log(Object.getOwnPropertyNames(search))
-	console.log(Object.getOwnPropertyNames(provider))
 
-	// // This is the code I have for testing non-widget geocoding. Doesn't work very well
-	// async function testGeocode() {
-	// 	console.log(await provider.search(document.getElementById("testingGeocoding").value));
-	// }
-	// document.getElementById("testingGeocoding").addEventListener("focusout", testGeocode);
+	// start timer when done typing on start input
+	document.getElementById('startCoordInput').addEventListener('keyup', () => {
+		clearTimeout(typingTimer);
+		if (document.getElementById('startCoordInput').value) {
+			typingTimer = setTimeout(doneTyping.bind(null, 'startCoordInput'), doneTypingInterval);
+		}
+	});
+
+
+	// start timer when done on destination input
+	document.getElementById('destinationCoordInput').addEventListener('keyup', () => {
+		clearTimeout(typingTimer);
+		// got the logic below from https://stackoverflow.com/questions/1190642/how-can-i-pass-a-parameter-to-a-settimeout-callback
+		if (document.getElementById('destinationCoordInput').value) {
+			typingTimer = setTimeout(doneTyping.bind(null, 'destinationCoordInput'), doneTypingInterval);
+		}
+	});
+
+
+	//user is "finished typing," do something
+	async function doneTyping (elementId) {
+		console.log("done typing")
+		console.log(elementId)
+
+		// get the addresses that OSM thinks are near the string
+		const results = await provider.search({ query: document.getElementById(elementId).value });
+  		// console.log(results); // » [{}, {}, {}, ...]
+
+		//sort them by their distance to center
+		center = map.getCenter();
+		// got logic from here https://stackoverflow.com/a/56223940
+		results.sort((address1,address2) => {
+			return center.distanceTo(L.latLng(address1["y"],address1["x"])) - 
+					center.distanceTo(L.latLng(address2["y"],address2["x"]));
+		});
+
+		console.log(results);
+	}
 
 
 	// This makes it so interacting with our overlay doesn't interact with the map
