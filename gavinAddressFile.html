@@ -45,6 +45,11 @@
 <!-- Input to test non-widget geocoding. Doesn't work right now -->
 <!-- <input type="text" id="testingGeocoding"> -->
 
+<ul>
+    <li id = "Address 1" style.display = "none"><button onClick="alert('Button 1')">Button 1</button></li>
+    <li id = "Address 2"><button onClick="alert('Button 2')">Button 2</button></li>
+    <li id = "Address 3"><button onClick="alert('Button 3')">Button 3</button></li>
+  </ul>
 
 <div id="map" use-global-leaflet="true">
 	<!-- 
@@ -75,14 +80,8 @@
 	L.control.scale().addTo(map);	// adds a scale to the map
 
 	var startMarker = L.marker(mapStartPos);
-	var destinationMarker = L.marker(mapStartPos);
-	var routeLine = null;
-
-	var routeStartCoords = null;	// start and end coords of actual route
-	var routeEndCoords = null;
-
-	var startCoords = mapStartPos;	// start and end coords that we send to postgres
-	var endCoords = mapStartPos;
+	var destinationMarker = L.marker(mapStartPos);	
+	
 
 	var inFocus = null; //Records which textbox was most recently clicked
 
@@ -160,6 +159,12 @@
 		});
 
 		console.log(results);
+
+		document.getElementById("Address 1").value = results[0]
+		document.getElementById("Address 2").value = results[1]
+		document.getElementById("Address 3").value = results[0]
+
+
 	}
 
 
@@ -212,7 +217,7 @@
 		// set the url we're going to send our http GET request to. rn it's localhost:9999 (this is set in the pythonHTTPServer.py file!)
 		// the line under this that says new URLSearchParams allows us to add extra parameters to this GET request
 			// we use this to add a parameter slot for start and destination, and we'll get those coords from the two text input slots
-			const url = (
+		const url = (
 			'http://localhost:9999?' +
 			new URLSearchParams({start: document.getElementById('startCoordInput').value, 
 								destination: document.getElementById('destinationCoordInput').value,
