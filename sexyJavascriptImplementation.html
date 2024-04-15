@@ -64,6 +64,8 @@
 			<option value="ST_Length(ST_Transform(geom_way, 3857))">Distance</option> 
 			<option value="ped_bike_pref">Pedestrian</option>  
 		</select>
+
+		<!-- TODO put some textboxes at the bottom of this that show what the route is actually from -->
 	</div>
 
 	<div id = "titleBox">
@@ -75,10 +77,10 @@
 		<p> This is in addressOptions </p>
 		<div class = "addressButton"></div>
 		<ul>
-			<li class = "addressButton" id = "address1"><button onClick="alert('Button 1')">Button 1</button></li>
-			<li class = "addressButton"><button onClick="alert('Button 2')">Button 2</button></li>
-			<li class = "addressButton"><button onClick="alert('Button 3')">Button 3</button></li>
-		  </ul>
+			<li><input type = "button" class = "addressButton" id = "address1" onClick="fillForm(this)" value = "Button 1"></li>
+			<li><input type = "button" class = "addressButton" id = "address2" onClick="fillForm(this)" value = "Button 1"></li>
+			<li><input type = "button" class = "addressButton" id = "address3" onClick="fillForm(this)" value = "Button 3"></li>
+		</ul>
 	</div>
 </div>
 
@@ -96,6 +98,11 @@
 		position: 'bottomright'
 	}).addTo(map);
 
+	const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+		maxZoom: 19,
+		attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+	}).addTo(map);
+
 	var startMarker = L.marker(mapStartPos);
 	var destinationMarker = L.marker(mapStartPos);
 	var routeLine = null;
@@ -108,33 +115,60 @@
 
 	var inFocus = null; //Records which textbox was most recently clicked
 
-	const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-		maxZoom: 19,
-		attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-	}).addTo(map);
+	var address1 = null;
+	var address2 = null;
+	var address3 = null;
 
-	var startBox = document.getElementById("startCoordInput"); //Adds event listener to record if textbox is clicked
-	if(startBox){
-		startBox.addEventListener('click', function() {
-    	startClicked();
-  		});
+
+
+
+
+	var startBox = document.getElementById("startCoordInput");
+	var endBox = document.getElementById("destinationCoordInput");
+
+	startBox.addEventListener('focus', function() {
+    	inFocus = startBox;
+		addressOptions.style.display = block;
+  	});
+	
+	endBox.addEventListener('focus', function() {
+    	inFocus = endBox;
+  	});
+
+
+
+	// gets the button that clicked it, then sets start & end textbox and coords correctly
+	function fillForm(button) {
+		if(button == document.getElementById("address1")) {
+			inFocus.value = address1.label;
+			if(inFocus == startBox) {
+				routeStartCoords = "" + address1.x + " " + address1.y;
+				// add start marker
+			}
+			else {
+				routeEndCoords = "" + address1.x + " " + address1.y;
+			}
+		}
+		if(button == document.getElementById("address2")) {
+			inFocus.value = address2.label;
+			if(inFocus == startBox) {
+				routeStartCoords = "" + address2.x + " " + address2.y;
+			}
+			else {
+				routeEndCoords = "" + address2.x + " " + address2.y;
+			}
+		}
+		if(button == document.getElementById("address3")) {
+			inFocus.value = address3.label;
+			if(inFocus == startBox) {
+				routeStartCoords = "" + address3.x + " " + address3.y;
+			}
+			else {
+				routeEndCoords = "" + address3.x + " " + address3.y;
+			}
+		}
+		console.log(routeStartCoords, routeEndCoords);
 	}
-
-	var endBox = document.getElementById("destinationCoordInput"); //Adds event listener to record if textbox is clicked
-	if(endBox){
-		endBox.addEventListener('click', function() {
-    	endClicked();
-  		});
-	}
-
-	function startClicked() { //sets focus variable to correct textfield
-		inFocus = startBox;
-	}
-
-	function endClicked() {  //sets focus variable to correct textfield
-		inFocus = endBox;
-	}
-
 
 	// got this wait for done typing code from https://stackoverflow.com/a/5926782
 
@@ -146,6 +180,8 @@
 
 
 	// start timer when done typing on start input
+	// got the logic below from https://stackoverflow.com/questions/1190642/how-can-i-pass-a-parameter-to-a-settimeout-callback
+
 	document.getElementById('startCoordInput').addEventListener('keyup', () => {
 		clearTimeout(typingTimer);
 		if (document.getElementById('startCoordInput').value) {
@@ -157,7 +193,6 @@
 	// start timer when done on destination input
 	document.getElementById('destinationCoordInput').addEventListener('keyup', () => {
 		clearTimeout(typingTimer);
-		// got the logic below from https://stackoverflow.com/questions/1190642/how-can-i-pass-a-parameter-to-a-settimeout-callback
 		if (document.getElementById('destinationCoordInput').value) {
 			typingTimer = setTimeout(doneTyping.bind(null, 'destinationCoordInput'), doneTypingInterval);
 		}
@@ -182,6 +217,21 @@
 		});
 
 		console.log(results);
+
+		if(results[0]) {
+			address1 = results[0];
+			document.getElementById("address1").value = address1["label"];
+		}
+
+		if(results[1]) {
+			address2 = results[1];
+			document.getElementById("address2").value = address2["label"];
+		}
+
+		if(results[2]) {
+			address3 = results[2];
+			document.getElementById("address3").value = address3["label"];
+		}
 	}
 
 
@@ -234,10 +284,13 @@
 		// set the url we're going to send our http GET request to. rn it's localhost:9999 (this is set in the pythonHTTPServer.py file!)
 		// the line under this that says new URLSearchParams allows us to add extra parameters to this GET request
 			// we use this to add a parameter slot for start and destination, and we'll get those coords from the two text input slots
+			console.log("start coords are" + routeStartCoords)
+			console.log("start coords are" + routeEndCoords)
+			
 			const url = (
 			'http://localhost:9999?' +
-			new URLSearchParams({start: document.getElementById('startCoordInput').value, 
-								destination: document.getElementById('destinationCoordInput').value,
+			new URLSearchParams({start: routeStartCoords, 
+								destination: routeEndCoords,
 								weight: document.getElementById('route-type').value}) //This gets the text value of our dropdown
 			);
 
@@ -293,9 +346,9 @@
 	// does the logic for our map clicking popups
 	var popup = L.popup();
 	function onMapClick(e) {
-		if(inFocus){
-			inFocus.value = e.latlng.lng + " " + e.latlng.lat; //puts coords directly into text field
-		}
+		// if(inFocus){
+		// 	inFocus.value = e.latlng.lng + " " + e.latlng.lat; //puts coords directly into text field
+		// }
 		popup
 			.setLatLng(e.latlng)
 			.setContent("You clicked the map at " + e.latlng.toString())

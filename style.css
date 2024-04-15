@@ -48,9 +48,10 @@ div {
 #addressOptions {
     position: absolute;
     top: 30%;
+    display: none;
 
     background-color: white;
-    height: 25%;
+    height: fit-content;
     width: 300px;
 
     outline-width: 5px;
@@ -61,6 +62,8 @@ div {
 
 .addressInput {
     margin-bottom: 5px;
+    white-space: normal;
+    word-wrap: break-word;
 }
 
 /*
