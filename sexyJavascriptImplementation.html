@@ -40,13 +40,13 @@
 -->
 <body>
 
-<h1>Leaflet Route Test</h1>
 
 <!-- Input to test non-widget geocoding. Doesn't work right now -->
 <!-- <input type="text" id="testingGeocoding"> -->
 
 
 <div id="map" use-global-leaflet="true">
+	
 	<!-- 
 		I put the route buttons on top of the map. Slowly working towards perfect UI
 		Check the CSS file to see how this works - uses position:relative for parent map and position:absolute for overlay
@@ -65,18 +65,36 @@
 			<option value="ped_bike_pref">Pedestrian</option>  
 		</select>
 	</div>
+
+	<div id = "titleBox">
+		<h1 id = "title"> Leaflet Route Test</h1>
+	</div>
+
+	
+	<div id="addressOptions">
+		<p> This is in addressOptions </p>
+		<div class = "addressButton"></div>
+		<ul>
+			<li class = "addressButton" id = "address1"><button onClick="alert('Button 1')">Button 1</button></li>
+			<li class = "addressButton"><button onClick="alert('Button 2')">Button 2</button></li>
+			<li class = "addressButton"><button onClick="alert('Button 3')">Button 3</button></li>
+		  </ul>
+	</div>
 </div>
 
-<div id="addressOptions">
-	<div class = "addressButton"></div>
-</div>
 
 
 
 <script>
 	const mapStartPos = [44.95, -93.16]
-	const map = L.map('map').setView(mapStartPos, 13);
+	const map = L.map('map', {zoomControl: false}).setView(mapStartPos, 13);
 	L.control.scale().addTo(map);	// adds a scale to the map
+	// the scale acts weirdly
+
+	// took this from https://stackoverflow.com/a/55767702
+	L.control.zoom({
+		position: 'bottomright'
+	}).addTo(map);
 
 	var startMarker = L.marker(mapStartPos);
 	var destinationMarker = L.marker(mapStartPos);
