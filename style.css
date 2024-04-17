@@ -48,7 +48,6 @@ div {
 #addressOptions {
     position: absolute;
     top: 30%;
-    display: none;
 
     background-color: white;
     height: fit-content;

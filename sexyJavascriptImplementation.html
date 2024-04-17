@@ -31,19 +31,18 @@
 	<!-- Moved all the styling to our style.css file-->
 </head>
 
+
 <!-- 
 	STUFF TO DO:
-		- Address matching
-		- Better error/edge-case handling (ie multiple route clicks)
 		- Remove old lines
-		- Better route-choosing viz
+		- Start and end marker visibility
+		- Better error handling for route fail
+		- Make it sexier
+		- Hide address list box when necessary
 -->
+
+
 <body>
-
-
-<!-- Input to test non-widget geocoding. Doesn't work right now -->
-<!-- <input type="text" id="testingGeocoding"> -->
-
 
 <div id="map" use-global-leaflet="true">
 	
@@ -74,11 +73,25 @@
 
 	
 	<div id="addressOptions">
+		<p id="initialMessage"> Start typing an address</p>
+
 		<div id="addressSpinner">
 			<p> Finding addresses...</p> 
 			<div class="spinner"></div>
 		</div>
+
+		<div id="addressError">
+			<p> Couldn't find addresses. Try refining your search</p>
+		</div>
 		
+		<div id="routeSpinner">
+			<p> Generating route...</p> 
+			<div class="spinner"></div>
+		</div>
+
+		<div id="routeError">
+			<p> There was an error when generating your route. Try again</p>
+		</div>
 
 		<div class = "addressButton"></div>
 		<ul>
@@ -171,7 +184,12 @@
 
 	
 	hideAddressButtons();
+
 	hideAddressSpinner();
+	hideAddressError();
+
+	hideRouteSpinner();
+	hideRouteError();
 
 	var startBox = document.getElementById("startCoordInput");
 	var endBox = document.getElementById("destinationCoordInput");
@@ -206,12 +224,10 @@
 
 	startBox.addEventListener('focus', function() {
     	inFocus = startBox;
-		addressOptions.style.display = "block";
   	});
 
 	endBox.addEventListener('focus', function() {
     	inFocus = endBox;
-		addressOptions.style.display = "block";
   	});
 
 
@@ -231,18 +247,6 @@
 		document.getElementById("3holder").style.display = "none"
 	}
 
-	// turns on the spinning mouse
-	function startMouseSpinner() {
-		document.body.style.cursor = "wait";
-		document.getElementById("map").style.cursor = "wait";
-	}
-
-	// turns off the spinning mouse
-	function endMouseSpinner() {
-		document.body.style.cursor = "auto"		// TODO: make this happen if errors occur during the PG process too
-		document.getElementById("map").style.cursor = "auto";
-	}
-
 	function showAddressSpinner() {
 		document.getElementById("addressSpinner").style.display = "block";
 	}
@@ -251,6 +255,29 @@
 		document.getElementById("addressSpinner").style.display = "none";
 	}
 
+	function showAddressError() {
+		document.getElementById("addressError").style.display = "block";
+	}
+
+	function hideAddressError() {
+		document.getElementById("addressError").style.display = "none";
+	}
+
+	function showRouteSpinner() {
+		document.getElementById("routeSpinner").style.display = "block";
+	}
+
+	function hideRouteSpinner() {
+		document.getElementById("routeSpinner").style.display = "none";
+	}
+
+	function showRouteError() {
+		document.getElementById("routeError").style.display = "block";
+	}
+
+	function hideRouteError() {
+		document.getElementById("routeError").style.display = "none";
+	}
 
 	/* ==============================================================
 		GENERAL FUNCTIONS
@@ -259,17 +286,28 @@
 
 	// Runs when we're pretty sure user is done looking for addresses
 	async function doneTyping (elementId) {
-		console.log("done typing")
-		console.log(elementId)
+		console.log("done typing");
+		console.log(elementId);
 
-		// hide all of the address buttons. We then later show the only ones that we got addresses for
+		// hide other elements
+		document.getElementById("initialMessage").style.display = "none";
 		hideAddressButtons();
+		hideAddressError();
+		hideRouteError();
 
-
+		var ogResults = null;
 		showAddressSpinner();
-		const ogResults = await provider.search({ query: document.getElementById(elementId).value });
-		// this is the actual async function to find addresses. the wait is while this is running
+		try { 
+			// this is the actual async function to find addresses. the wait is while this is running
+			ogResults = await provider.search({ query: document.getElementById(elementId).value });
+			console.log("did result search");
+		}
+		catch(error) {
+			console.log('caught error');
+			showAddressError();
+		}
 		hideAddressSpinner();
+
 
 		// removes non-Minnesota elements
 		const results = [];
@@ -281,7 +319,7 @@
 		}
 
 		if (results.length == 0) {
-			// SHOW A THING THAT WE FOUND NO ADDRESS IN MN
+			showAddressError();
 		}
 		
 		// only show the address button if we found an address for that slot
@@ -354,7 +392,7 @@
 
 
 
-	function addPolylineFromInput() {
+	function addPolyline() {
 		// Get the input value and split it into individual coordinate pairs
 		console.log("route coords are: " + routeCoords)
 		const inputText = routeCoords;
@@ -401,8 +439,6 @@
 				"Content-Type": "text/html",
 			},
 		})	
-		// not sure what this specific part does. We don't do anything with our data until the .then(data) segmenent, 
-			// I think we do this .then first so that we know we have a response before we start asking it for data
 		.then(response => {
 			if (!response.ok) {
 				throw new Error('Network response was not ok');
@@ -420,10 +456,20 @@
 	}
 
 	async function getRoute() {
-		startMouseSpinner();
-		routeCoords = await getRouteCoords();
-		addPolylineFromInput();
-		endMouseSpinner();
+		hideAddressButtons();
+		hideAddressError();
+		hideRouteError();
+
+		showRouteSpinner();
+		try {
+			routeCoords = await getRouteCoords();
+			addPolyline();
+			document.getElementById("initialMessage").style.display = "inline";
+		}
+		catch {
+			showRouteError();
+		}
+		hideRouteSpinner();
 	}
 
 
