@@ -215,6 +215,11 @@
   	});
 
 
+	// Sets the callback for our get route button
+	document.getElementById('getRouteBtn').addEventListener('click', getRoute);
+
+
+
 	/* ===================================================
 		Helper functions for showing/hiding HTML elements
 	=================================================== */
@@ -343,17 +348,8 @@
 
 
 
-
-
-
-
-
-
-	
-
-
 	/* ============================================================
-		BELOW HERE IS ROUTE/WEBSERVER RELATED STUFF
+					ROUTE/WEBSERVER RELATED STUFF
 	============================================================== */
 
 
@@ -429,9 +425,6 @@
 		addPolylineFromInput();
 		endMouseSpinner();
 	}
-
-	// Sets the callback for our get route button
-	document.getElementById('getRouteBtn').addEventListener('click', getRoute);
 
 
 
