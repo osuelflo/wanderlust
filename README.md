@@ -143,53 +143,181 @@ WHERE t.osm_id = l.osm_id;
 
 Now we should be set to run our route finder query again, but we can replace `ST_Length(ST_Transform(geom_way, 3857))` with `ped_bike_pref`.
 
-An issue with this query is that some things are marked as footpaths in sql that are not actually particularly pleasant, as they are sidewalks to major streets.  The version below finds the nearest path to every other considered pedestrian path, and checks if it's a major road, in which case it doesn't decrease the weight.
-(This took me 28 minutes to run so strap in)
+An issue with this query is that some things are marked as footpaths in sql that are not actually particularly pleasant, as they are sidewalks to major streets.  The version below finds the nearest path to every other considered pedestrian path, and checks if it's a major road, in which case it doesn't decrease the weight. To solve this, we'll create yet another new collumn, this time marking whether a large street exists within a certain threshold a given line segment.  The query should look something like this:
 
 ```
+CREATE INDEX way_gix ON planet_osm_line USING GIST(way);
+CREATE INDEX highway_gix ON planet_osm_line (highway); --Creating indexes to make operations faster
+VACUUM ANALYZE planet_osm_line;
+ALTER TABLE twincities_2po_4pgr ADD COLUMN "highway_true" boolean; --Result column
 
-UPDATE minnesota_2po_4pgr as t  --marks the table we're updating as t
+WITH highways AS (SELECT way FROM planet_osm_polygon
+				  WHERE highway IN ('motorway', 'trunk', 'primary', 'secondary'))
+UPDATE twincities_2po_4pgr as t  --marks the table we're updating as t
+SET highway_true = --Marks the column  we're setting
+ 		(SELECT COUNT(*) FROM 
+ 		 (SELECT 1 FROM highways WHERE highways.way::geometry <-> l.way::geometry < 20 LIMIT 1) 
+		 ) > 0  --Checks if a road exists that is major within a distance radius
+FROM planet_osm_polygon AS l --Specifies the table we're getting line data from
+WHERE t.osm_id = l.osm_id; --Makes sure that our cost column corresponds to the correct osm_ids in both tables
+
+```
+This will take a while to run, depending on the size of your dataset.  For the twin cities, it took just over 4 hours.  It's worth it though, because now we have a way of knowing if a path is a sidewalk on a major street or pleasant residential walking trail.  It's time to weigh our edges once more, this time using our new column:
+
+```
+UPDATE twincities_2po_4pgr as t  --marks the table we're updating as t
 SET ped_bike_pref = --Marks the column  we're setting
+--l.highway IN ('footway', 'pedestrian', 'cycleway', 'track', 'steps')
 CASE WHEN --If statement
-	(l.highway IN ('footway', 'pedestrian', 'cycleway', 'track', 'steps', 'path')) --The tags that we want (stored in the "highway" column of a line/polygon)
+	(t.highway_true = true) --The tags that we want (stored in the "highway" column of a line/polygon)
 THEN
-	CASE WHEN
-		(((SELECT COUNT(*) FROM --Same as Above
-		  (SELECT * --Creates a distance column
-		   FROM (SELECT highway, line.way <-> l.way::geometry AS dist FROM planet_osm_line AS line WHERE highway IN ('motorway', 'trunk', 'primary', 'secondary')) 
-		   WHERE dist < 20 LIMIT 1--checks against all other lines
-		   ) WHERE highway IN ('motorway', 'trunk', 'primary', 'secondary'))) > 0) --Checks if nearest road is major > 0) --Checks if nearest road is major
+	CASE WHEN 
+		(l.highway IN ('footway', 'pedestrian', 'cycleway', 'track', 'steps'))
+	THEN
+		ST_Length(ST_Transform(geom_way, 3857))/5 --Length/1000
+	WHEN
+		(l.highway IN ('living_street', 'tertiary'))
+	THEN
+		ST_Length(ST_Transform(geom_way, 3857))/3
+	ELSE
+		ST_Length(ST_Transform(geom_way, 3857))
+	END
+ELSE
+	CASE WHEN 
+		(l.highway IN ('footway', 'pedestrian', 'cycleway', 'track', 'steps'))
+	THEN
+		ST_Length(ST_Transform(geom_way, 3857))/100 --Length/1000
+	WHEN
+		(l.highway IN ('living_street', 'tertiary'))
 	THEN
 		ST_Length(ST_Transform(geom_way, 3857))/10
 	ELSE
-		ST_Length(ST_Transform(geom_way, 3857))/1000--Length/1000
+		ST_Length(ST_Transform(geom_way, 3857))/2
 	END
-ELSE
-	ST_Length(ST_Transform(geom_way, 3857)) --Just length
 END
+	 
 FROM planet_osm_line AS l --Specifies the table we're getting line data from
 WHERE t.osm_id = l.osm_id; --Makes sure that our cost collumn corresponds to the correct osm_ids in both tables
 
 -- Same code here but run on the planet_osm_polygon table
-UPDATE minnesota_2po_4pgr as t
+UPDATE twincities_2po_4pgr as t
 SET ped_bike_pref =
-CASE WHEN
-	(l.highway IN ('footway', 'pedestrian', 'cycleway', 'track', 'steps', 'path'))
+CASE WHEN --If statement
+	(t.highway_true = true) --The tags that we want (stored in the "highway" column of a line/polygon)
 THEN
-	CASE WHEN
-		(((SELECT COUNT(*) FROM --Same as Above
-		  (SELECT * --Creates a distance column
-		   FROM (SELECT highway, line.way <-> l.way::geometry AS dist FROM planet_osm_line AS line WHERE highway IN ('motorway', 'trunk', 'primary', 'secondary')) 
-		   WHERE dist < 20 LIMIT 1--checks against all other lines
-		   ) WHERE highway IN ('motorway', 'trunk', 'primary', 'secondary'))) > 0) --Checks if nearest road is major > 0) --Checks if nearest road is major
+	CASE WHEN 
+		(l.highway IN ('footway', 'pedestrian', 'cycleway', 'track', 'steps'))
+	THEN
+		ST_Length(ST_Transform(geom_way, 3857))/5 --Length/1000
+	WHEN
+		(l.highway IN ('living_street', 'tertiary'))
+	THEN
+		ST_Length(ST_Transform(geom_way, 3857))/3
+	ELSE
+		ST_Length(ST_Transform(geom_way, 3857))
+	END
+ELSE
+	CASE WHEN 
+		(l.highway IN ('footway', 'pedestrian', 'cycleway', 'track', 'steps'))
+	THEN
+		ST_Length(ST_Transform(geom_way, 3857))/100 --Length/1000
+	WHEN
+		(l.highway IN ('living_street', 'tertiary'))
 	THEN
 		ST_Length(ST_Transform(geom_way, 3857))/10
 	ELSE
-		ST_Length(ST_Transform(geom_way, 3857))/1000--Length/1000
+		ST_Length(ST_Transform(geom_way, 3857))/2
 	END
-ELSE
-	ST_Length(ST_Transform(geom_way, 3857))
 END
 FROM planet_osm_polygon AS l
 WHERE t.osm_id = l.osm_id;
 ```
+
+This should be a pretty reasonable routing engine for walking paths, if one that doesn't mind taking a meandering route.  Now let's try creating a weight system for biking:
+
+```
+ALTER TABLE twincities_2po_4pgr ADD COLUMN "bike_pref" float;
+UPDATE twincities_2po_4pgr as t  --marks the table we're updating as t
+SET bike_pref = --Marks the column  we're setting
+--l.highway IN ('footway', 'pedestrian', 'cycleway', 'track', 'steps')
+CASE WHEN --If statement
+	(t.highway_true = true) --The tags that we want (stored in the "highway" column of a line/polygon)
+THEN
+	CASE WHEN 
+		(l.highway IN ('footway', 'pedestrian', 'track', 'steps'))
+	THEN
+		9000
+	WHEN
+		(l.highway IN ('living_street', 'tertiary'))
+	THEN
+		ST_Length(ST_Transform(geom_way, 3857))/3
+	WHEN
+		(l.highway IN ('cycleway') OR l.bicycle IN ('yes', 'designated'))
+	THEN
+		ST_Length(ST_Transform(geom_way, 3857))/5
+	ELSE
+		ST_Length(ST_Transform(geom_way, 3857))
+	END
+ELSE
+	CASE WHEN 
+		(l.highway IN ('footway', 'pedestrian', 'track', 'steps'))
+	THEN
+		9000
+	WHEN
+		(l.highway IN ('living_street', 'tertiary'))
+	THEN
+		ST_Length(ST_Transform(geom_way, 3857))/10
+	WHEN
+		(l.highway IN ('cycleway') OR l.bicycle IN ('yes', 'designated'))
+	THEN
+		ST_Length(ST_Transform(geom_way, 3857))/100
+	ELSE
+		ST_Length(ST_Transform(geom_way, 3857))
+	END
+END
+	 
+FROM planet_osm_line AS l --Specifies the table we're getting line data from
+WHERE t.osm_id = l.osm_id; --Makes sure that our cost collumn corresponds to the correct osm_ids in both tables
+
+-- Same code here but run on the planet_osm_polygon table
+UPDATE twincities_2po_4pgr as t
+SET bike_pref =
+CASE WHEN --If statement
+	(t.highway_true = true) --The tags that we want (stored in the "highway" column of a line/polygon)
+THEN
+	CASE WHEN 
+		(l.highway IN ('footway', 'pedestrian', 'track', 'steps'))
+	THEN
+		9000
+	WHEN
+		(l.highway IN ('living_street', 'tertiary'))
+	THEN
+		ST_Length(ST_Transform(geom_way, 3857))/3
+	WHEN
+		(l.highway IN ('cycleway') OR l.bicycle IN ('yes', 'designated'))
+	THEN
+		ST_Length(ST_Transform(geom_way, 3857))/5
+	ELSE
+		ST_Length(ST_Transform(geom_way, 3857))
+	END
+ELSE
+	CASE WHEN 
+		(l.highway IN ('footway', 'pedestrian', 'track', 'steps'))
+	THEN
+		9000
+	WHEN
+		(l.highway IN ('living_street', 'tertiary'))
+	THEN
+		ST_Length(ST_Transform(geom_way, 3857))/10
+	WHEN
+		(l.highway IN ('cycleway') OR l.bicycle IN ('yes', 'designated'))
+	THEN
+		ST_Length(ST_Transform(geom_way, 3857))/100
+	ELSE
+		ST_Length(ST_Transform(geom_way, 3857))
+	END
+END
+FROM planet_osm_polygon AS l
+WHERE t.osm_id = l.osm_id;
+```
+Yay!  Now we have a few different weighting systems for generating routes.  Time to go outside.
