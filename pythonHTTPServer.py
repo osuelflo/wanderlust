@@ -73,11 +73,11 @@ class MyHTTP(BaseHTTPRequestHandler):
             SELECT id,
                 source,
                 target,
-                {weight} AS cost
+                {weight} AS cost, reverse_cost
                 FROM minnesota_2po_4pgr',
             array(SELECT source FROM start),
             array(SELECT target FROM destination),
-            directed := false) AS di
+            directed := true) AS di
         JOIN   minnesota_2po_4pgr AS pt
         ON   di.edge = pt.id;""".format(start = start, destination = destination, weight = weight))
             
