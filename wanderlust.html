@@ -52,11 +52,9 @@
 	-->
 	<div class="overlay" id="overlayBox"> 
 		<!-- These are the inputs for our start and end coords-->
-		<input type="textarea" id="startCoordInput" class = addressInput placeholder="Address for start of route">
-		<input type="textarea" id="destinationCoordInput" class = addressInput placeholder="Address for end of route">
+		<textarea id="startCoordInput" class = addressInput placeholder="Address for start of route"></textarea>
+		<textarea id="destinationCoordInput" class = addressInput placeholder="Address for end of route"></textarea>
 
-		<!-- This calls getRoute, which just calls Postgres & Polyline in one function -->
-		<button id="getRouteBtn">Get Route</button>
 
 		<!-- Toggle Pedestrian Preference -->
 		<select name="Route Types" id="route-type"> 
@@ -64,7 +62,9 @@
 			<option value="ped_bike_pref">Pedestrian</option>  
 		</select>
 
-		<!-- TODO put some textboxes at the bottom of this that show what the route is actually from -->
+		<!-- This calls getRoute, which just calls Postgres & Polyline in one function -->
+		<button id="getRouteBtn">Get Route</button>
+
 	</div>
 
 	<div id = "titleBox">
@@ -140,6 +140,13 @@
 	L.DomEvent.on(overlay, 'mousedown', L.DomEvent.stopPropagation);	// these two prevent drags from propagating
 	L.DomEvent.on(overlay, 'touchstart', L.DomEvent.stopPropagation);
 
+	var addressOverlay = L.DomUtil.get('addressOptions'); // this must be an ID, not class!
+	L.DomEvent.on(addressOverlay, 'mousewheel', L.DomEvent.stopPropagation);
+	L.DomEvent.on(addressOverlay, 'click', L.DomEvent.stopPropagation);
+	L.DomEvent.on(addressOverlay, 'dblclick', L.DomEvent.stopPropagation);
+	L.DomEvent.on(addressOverlay, 'mousedown', L.DomEvent.stopPropagation);	// these two prevent drags from propagating
+	L.DomEvent.on(addressOverlay, 'touchstart', L.DomEvent.stopPropagation);
+
 
 	// This is the tool that generates our addresses
 	const provider = new GeoSearch.OpenStreetMapProvider({
@@ -197,7 +204,8 @@
 
 	
 	// This is the logic for searching addresses after done typing
-	// TODO: run address search on Enter too
+	// TODO: run address search on Copy-Paste too
+	// TODO: be clearer about what addresses are used for route - if they change type but no new button, what do
 
 	let typingTimer;                //timer identifier
 	let doneTypingInterval = 750;  //time in ms (.75 seconds)
