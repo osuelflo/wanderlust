@@ -34,20 +34,14 @@ div {
   z-index: 99999999;
 }
 
-#titleBox {
-    position: absolute;
-    right: 0px;
-    z-index: 99999999;
-}
 
-#title {
-    color: green;
-    text-align: left;
+.addressInput {
+   
 }
 
 #addressOptions {
     position: absolute;
-    top: 30%;
+    top: 28%;
 
     background-color: white;
     height: fit-content;
@@ -57,6 +51,7 @@ div {
     outline-color: black;
     outline: solid;
     z-index: 99999999;
+    border-radius: 0 0 15px 15px;
 }
 
 .addressButton {
@@ -67,6 +62,20 @@ div {
 
 .addressInput {
     margin-bottom: 5px;
+}
+
+
+#titleBox {
+    position: absolute;
+    bottom: 3px;
+    right: 45px;
+    z-index: 99999999;
+}
+
+
+#logo {
+    width: 120px;
+    height: 120px;
 }
 
 

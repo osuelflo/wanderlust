@@ -52,8 +52,8 @@
 	-->
 	<div class="overlay" id="overlayBox"> 
 		<!-- These are the inputs for our start and end coords-->
-		<input type="text" id="startCoordInput" class = addressInput placeholder="Address for start of route">
-		<input type="text" id="destinationCoordInput" class = addressInput placeholder="Address for end of route">
+		<input type="textarea" id="startCoordInput" class = addressInput placeholder="Address for start of route">
+		<input type="textarea" id="destinationCoordInput" class = addressInput placeholder="Address for end of route">
 
 		<!-- This calls getRoute, which just calls Postgres & Polyline in one function -->
 		<button id="getRouteBtn">Get Route</button>
@@ -68,7 +68,8 @@
 	</div>
 
 	<div id = "titleBox">
-		<h1 id = "title"> Leaflet</h1>
+		<a href="https://www.flaticon.com/free-icons/map" title="map icons">Logo uses Freepik Flaticon</a>
+		<img id="logo" src="fontLogo.png" alt="logo. map with blue lines on the streets"> 
 	</div>
 
 	
@@ -196,8 +197,6 @@
 
 	
 	// This is the logic for searching addresses after done typing
-	// TODO: make sure this works when we have both boxes
-	// TODO: this doesn't like vague addresses - give an error message to user that says need more info
 	// TODO: run address search on Enter too
 
 	let typingTimer;                //timer identifier
@@ -289,7 +288,7 @@
 		console.log("done typing");
 		console.log(elementId);
 
-		// hide other elements
+		// hide other address-related elements
 		document.getElementById("initialMessage").style.display = "none";
 		hideAddressButtons();
 		hideAddressError();
@@ -297,9 +296,14 @@
 
 		var ogResults = null;
 		showAddressSpinner();
+
+
+		searchQuery = document.getElementById(elementId).value;
+		searchQuery = limitSearchArea(searchQuery);
+
 		try { 
 			// this is the actual async function to find addresses. the wait is while this is running
-			ogResults = await provider.search({ query: document.getElementById(elementId).value });
+			ogResults = await provider.search({ query: searchQuery });
 			console.log("did result search");
 		}
 		catch(error) {
@@ -318,10 +322,12 @@
 			}
 		}
 
+		// throw error if no available results
 		if (results.length == 0) {
 			showAddressError();
 		}
 		
+
 		// only show the address button if we found an address for that slot
 		// 1holder, 2holder, 3holder etc. are the list items holding the buttons
 		if(results[0]) {
@@ -344,12 +350,25 @@
 	}
 
 
+	/*
+		If the query doesn't already contain the name of the area you're searching, add it.
+		For us, we automatically limit to Minnesota, because that's the area we have
+	*/
+	function limitSearchArea(searchQuery) {
+		if (!(searchQuery.includes("Minnesota") || searchQuery.includes("minnesota")) && 
+			!(searchQuery.includes("mn") || searchQuery.includes("MN"))) {
+				searchQuery = searchQuery + " Minnesota";
+		}
+
+		return searchQuery;
+	}
+
+
 	/* Callback for the buttons that contain addresses. Sets the placeholder route 
 	   coords and the contents of the start or end box to the full new address. */
 	function fillForm(button) {
 		if(button == document.getElementById("address1")) {
 
-			// add error control for if no address was put here
 			inFocus.value = address1.label;
 			if(inFocus == startBox) {
 				routeStartCoords = "" + address1.x + " " + address1.y;
@@ -378,9 +397,6 @@
 			}
 		}
 		console.log(routeStartCoords, routeEndCoords);
-
-		// inFocus = null;
-		// addressOptions.style.display = "none";
 	}
 
 
