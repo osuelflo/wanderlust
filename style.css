@@ -43,6 +43,7 @@ div {
     width: 250px;
     margin: auto;
     margin-top: 15px;
+    resize: none;
 }
 
 #getRouteBtn {
