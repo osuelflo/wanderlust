@@ -1,7 +1,7 @@
 ## Installation Process for MacOS
 ### Step 1: Installing Homebrew
 
-Majority of this installation guide was taken from [this tutorial] (https://www.codementor.io/@engineerapart/getting-started-with-postgresql-on-mac-osx-are8jcopb).
+Majority of this installation guide was taken from [this tutorial](https://www.codementor.io/@engineerapart/getting-started-with-postgresql-on-mac-osx-are8jcopb).
 Homebrew is a package manager that is popular on MacOS. To install it, copy and paste the following command into your command line:
 `/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"`.
 ### Step 2: Installing Postgres, postgis, and pgrouting

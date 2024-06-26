@@ -18,9 +18,9 @@ PGRouting needs a certain data structure in order to operate, and raw OSM files 
 We have one more conversion to do to get it to become data that can be used by pgRouting.  Download [osm2po](https://osm2po.de/), unzip the folder, then open the config file. Change line 190 to “wtr.finalMask = car,foot,bike”. This will filter the OSM data to segments with these tags, uncomment lines 221 to 230 (This makes sure that we have access to all types of paths in our routing calculation), then Uncomment (remove the “#” at the beginning) of line 341 “postp.0.class = de.cm.osm2po.plugins.postp.PgRoutingWriter”. This will have “osm2po” output topology in a format that we can read with pgRouting.  Save the config and run `java -Xmx512m -jar osm2po-core-5.5.5-signed.jar cmd=c prefix=lisbon /mnt/c/osm2pgsql_guide/Lisbon.pbf`, replacing the paths once again with your own.  Now we just need to add this data to our data base, which we can do using `psql -h localhost -p 5432 -U postgres -d postgres -q -f "C:\Users\minnesota\minnesota_2po_4pgr.sql"`, once again replacing paths.  If it isn't responding to psql commands in the terminal, you might have to add `C:\Program Files\PostgreSQL\16\bin` and  `C:\Program Files\PostgreSQL\16\lib` to the System Paths section.  
 Once this is done, you're ready to run pgrouting! 
 
-### Step 3:  Using PGRouting
+### Step 3:  Testing PGRouting
 
-Begin by checking extensions using `CREATE EXTENSION postgis;` and `CREATE EXTENSION pgrouting;`.  If these are both added, try running this (Replacing starting and ending latitudes and longitudes with ones that exist in chosen data region):
+Begin by checking extensions in a tool like pgAdmin using `CREATE EXTENSION postgis;` and `CREATE EXTENSION pgrouting;`.  If these are both added, try running this query to see if you're given a route. You should be able to visualize this in the same tab where you run the query. Remember to replace the starting and ending latitudes and longitudes with ones that exist in chosen data region.
 ```
 WITH start AS (
   SELECT topo.source --could also be topo.target
@@ -53,63 +53,26 @@ FROM pgr_dijkstra('
 JOIN   minnesota_2po_4pgr AS pt
   ON   di.edge = pt.id;
 ```
-This returns coordinates sorta
-```
-WITH start AS (
-  SELECT topo.source --could also be topo.target
-  FROM minnesota_2po_4pgr as topo
-  ORDER BY topo.geom_way <-> ST_SetSRID(
-    ST_GeomFromText('POINT (-93.167165 44.936098)'),
-  4326)
-  LIMIT 1
-),
--- find the nearest vertex to the destination longitude/latitude
-destination AS (
-  SELECT topo.target --could also be topo.target
-  FROM minnesota_2po_4pgr as topo
-  ORDER BY topo.geom_way <-> ST_SetSRID(
-    ST_GeomFromText('POINT (-90.337104 47.751911)'),
-  4326)
-  LIMIT 1
-)
--- use Dijsktra and join with the geometries
-SELECT ST_AsText(ST_LineMerge(ST_AsText(ST_Transform(ST_Union(geom_way), 4326)))) as route
-FROM pgr_dijkstra('
-    SELECT id,
-         source,
-         target,
-         ST_Length(ST_Transform(geom_way, 3857)) AS cost
-        FROM minnesota_2po_4pgr',
-    array(SELECT source FROM start),
-    array(SELECT target FROM destination),
-    directed := false) AS di
-JOIN   minnesota_2po_4pgr AS pt
-  ON   di.edge = pt.id;
-```
 
 ### Step 4. Using Postgres through Javascript
 - First, run the PythonHTTPServer file
-  - If this is the first time using this file, you may have to install the psycopg2 library. Just run pip install psycopg2 in the correct directory and you should be good
+  - If this is the first time using this file, you may have to install the psycopg2 library. Just run 'pip install psycopg2' in the correct directory and you should be good
   - This will begin running a server in the background of your computer running out of your localhost
   - Make sure that you update the database name, password, and port number to match your specific postgres setup
-    - You may also have to update the prefix on your minnesota files in the SQL query - I changed my name to minnesota, so hopefully not
+    - You may also have to update the prefix on your geospatial data files in the SQL query
   - If you make any changes to this Python file, or want to close the server at any point, you can just close the Python terminal in VSCode
     - If you change the Python file but don't close the terminal, your changes won't be used by the server
 
+- Now that this server is running, you should be ready to use Wanderlust's basic functionality!
 
-- Then, open the postgresJavascriptTest.html file
-  - There should be a text input slot for your start and end coordinates
-    - put coordinates into those slots, removing the comma that clicking the map will include
-  - Pressing the Get Postgres Route button will pass those two slots into pgrouting and respond with the result of the HTTP request to our python server into the polyline input text box
-    - ### BUG HERE!
-      - Right now, basically any route that isn't the one we calibrated on (the St. Paul to Duluth route) will give us some weird ass route that just runs along the Wisconsin border
-      - I'm not sure why. I think James knows more about the Query process than I do. Looks like it generates a route that doesn't actually connect the two corods we give it
-        - I think it has to do with the SRID 4326 in the start/destination section. Maybe it's selecting a weird topography target
-      - If you want to just make the route appear, you can steal the original coords for the calibration route from the pythonPostgresTest.py file - when the coords are the same as our originals it works
-        - Those coords are -93.167165 44.936098 for the start and -90.337104 47.751911 for the destination
-
-- Then you should just be able to add the polyline from our polyline button
-
+- To do so, open wanderlust.html
+  - There will be two slots to enter addresses. Go ahead and enter two addresses in Minnesota
+  	- Our address matching system has some particular naming conventions, so it will autocorrect extra words (like Macalester -> Macalester College), but won't do so for partial words (like Mac -> Macalester)
+  - For now, don't adjust the Distance dropdown menu, because we haven't set up our alternative routing approaches yet!
+  - Instead, just click Get Route, and give Postgres some time to find your route
+  - Once it has, you should see the route on your screen!
+  - Yippeee!!!
+ 
 ### Step 5:  Adding Custom Edge Weights
 
 First, we need to add a column to our table.  For our first edited version, we're going to create a column of edge costs that prioritizes pedestrian and biking tracks.  We'll call this new column `ped_bike_pref`.  The sql query looks like this: `ALTER TABLE minnesota_2po_4pgr ADD COLUMN "ped_bike_pref" float;`. Now we have to run a query to update this new column with some weights.  In this case we will edit the weights simply in that we will just divide the cost of any line or polygon that has a category that matches what we want by 1000.  The query is as follows (Took me just over minute to run):
@@ -320,4 +283,4 @@ END
 FROM planet_osm_polygon AS l
 WHERE t.osm_id = l.osm_id;
 ```
-Yay!  Now we have a few different weighting systems for generating routes.  Time to go outside.
+Yay!  Now we have a few different weighting systems for generating routes.  Now you can feel free to use the dropdown menu to pick your own route-selection style.
